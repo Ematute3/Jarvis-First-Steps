@@ -20,7 +20,6 @@ object Gate : Subsystem {
 
     // ==================== INITIALIZATION ====================
     override fun initialize() {
-        close() // Start closed
     }
 
     // ==================== COMMANDS ====================
@@ -34,16 +33,12 @@ object Gate : Subsystem {
     /** Close the gate */
     val close = InstantCommand{
         gateServo.position = GateConstants.GATE_CLOSED
-        isOpen = false
+
     }
 
     /** Toggle gate state */
-    fun toggle() {
-        if (isOpen) close else open
-    }
 
-    /** Check if gate is open */
-    fun isOpen(): Boolean = isOpen
+
 
     // ==================== PERIODIC ====================
     override fun periodic() {

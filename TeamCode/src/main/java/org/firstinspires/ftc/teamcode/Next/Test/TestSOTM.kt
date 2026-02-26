@@ -111,5 +111,6 @@ class TestSOTM : NextFTCOpMode() {
         telemetry.addData("Controls:", "")
         telemetry.addData("A", "Toggle SOTM Display")
         telemetry.addData("Driving", "Move while shooting to test")
+        telemetry.update()
     }
 }

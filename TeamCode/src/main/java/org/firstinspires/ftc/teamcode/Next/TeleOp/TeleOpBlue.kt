@@ -18,9 +18,9 @@ import org.firstinspires.ftc.teamcode.Lower.Gate.Gate
 import org.firstinspires.ftc.teamcode.Lower.Intake.Intake
 import org.firstinspires.ftc.teamcode.Shooter.FlyWheel.FlyWheel
 import org.firstinspires.ftc.teamcode.Shooter.Hood.Hood
-import org.firstinspires.ftc.teamcode.Shooter.Turret.Turret
 import org.firstinspires.ftc.teamcode.Shooter.Limelight.Limelight
 import org.firstinspires.ftc.teamcode.AutoAim.AutoAim
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystems.Shooter.Turret
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants
 
 /**
@@ -51,7 +51,7 @@ class TeleOpBlue : NextFTCOpMode() {
     private val joinedTelemetry = JoinedTelemetry(telemetry, panelsTelemetry)
 
     // ==================== ENUMS ====================
-    private enum class AimMode { OFF, ODO, LL }
+    private enum class AimMode { OFF, ODO }
     private enum class FlyMode { IDLE, CLOSE, MID, FAR, AUTO }
     private enum class ShootState { READY, SPINNING, FIRING }
 
@@ -96,7 +96,7 @@ class TeleOpBlue : NextFTCOpMode() {
         ).schedule()
 
         // Reset turret at start
-        Turret.reset()
+
 
         // Default to auto aim
         autoAimEnabled = true
@@ -189,13 +189,12 @@ class TeleOpBlue : NextFTCOpMode() {
         Gamepads.gamepad2.leftBumper.whenBecomesTrue {
             currentAimMode = when (currentAimMode) {
                 AimMode.OFF -> AimMode.ODO
-                AimMode.ODO -> AimMode.LL
-                AimMode.LL -> AimMode.OFF
+                AimMode.ODO -> AimMode.OFF
             }
         }
 
         // Right Bumper: Reset turret
-        Gamepads.gamepad2.rightBumper.whenBecomesTrue { Turret.reset() }
+
 
         // --- HOOD ---
         // D-Pad: Hood presets
@@ -222,7 +221,7 @@ class TeleOpBlue : NextFTCOpMode() {
             Gate.close,
             FlyWheel.off,
             Intake.stop,
-            Turret.stop
+
         ).schedule()
 
         currentFlyMode = FlyMode.IDLE
@@ -247,7 +246,6 @@ class TeleOpBlue : NextFTCOpMode() {
         when (currentAimMode) {
             AimMode.OFF -> { /* Manual control */ }
             AimMode.ODO -> Turret.aimWithOdometry()
-            AimMode.LL -> Turret.aimWithLimelight()
         }
 
         // Update telemetry
@@ -268,7 +266,7 @@ class TeleOpBlue : NextFTCOpMode() {
         telemetry.addData("Flywheel/At Target", if (FlyWheel.isAtTarget()) "YES" else "NO")
 
         // Turret
-        telemetry.addData("Turret/Angle", "%.1f°".format(Turret.currentAngleDegrees))
+
         telemetry.addData("Turret/Mode", currentAimMode.name)
 
         // Hood

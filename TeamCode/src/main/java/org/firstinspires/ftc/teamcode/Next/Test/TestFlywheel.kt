@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.Test
 
+import com.bylazar.telemetry.PanelsTelemetry
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 import dev.nextftc.core.components.BindingsComponent
 import dev.nextftc.core.components.SubsystemComponent
@@ -91,5 +92,7 @@ class TestFlywheel : NextFTCOpMode() {
         telemetry.addData("DPad", "Set RPM")
         telemetry.addData("A", "Toggle Volt Comp")
         telemetry.addData("B", "Toggle Physics")
+        telemetry.update()
+        PanelsTelemetry.telemetry.update()
     }
 }

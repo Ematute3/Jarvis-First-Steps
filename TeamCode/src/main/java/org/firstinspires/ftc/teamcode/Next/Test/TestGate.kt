@@ -6,7 +6,7 @@ import dev.nextftc.core.components.SubsystemComponent
 import dev.nextftc.ftc.Gamepads
 import dev.nextftc.ftc.NextFTCOpMode
 import dev.nextftc.ftc.components.BulkReadComponent
-import dev.nextftc.ftc.ActiveOpMode.telemetry
+
 import org.firstinspires.ftc.teamcode.Lower.Gate.Gate
 
 /**
@@ -36,29 +36,22 @@ class TestGate : NextFTCOpMode() {
 
     private fun bindControls() {
         // A: Toggle
-        Gamepads.gamepad1.a.whenBecomesTrue {
-            Gate.toggle()
-        }
 
         // X: Open
-        Gamepads.gamepad1.x.whenBecomesTrue {
-            Gate.open()
-        }
+        Gamepads.gamepad1.x whenBecomesTrue Gate.open whenBecomesFalse Gate.close
+
 
         // B: Close
-        Gamepads.gamepad1.b.whenBecomesTrue {
-            Gate.close()
-        }
+
     }
 
     override fun onUpdate() {
         telemetry.addData("=== GATE TEST ===", "")
-        telemetry.addData("State", if (Gate.isOpen()) "OPEN" else "CLOSED")
-
         telemetry.addData("", "")
         telemetry.addData("Controls:", "")
         telemetry.addData("A", "Toggle")
         telemetry.addData("X", "Open")
         telemetry.addData("B", "Close")
+        telemetry.update()
     }
 }

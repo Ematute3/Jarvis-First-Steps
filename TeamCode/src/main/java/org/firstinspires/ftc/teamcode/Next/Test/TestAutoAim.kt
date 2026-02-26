@@ -94,5 +94,6 @@ class TestAutoAim : NextFTCOpMode() {
         telemetry.addData("A", "Toggle AutoAim")
         telemetry.addData("DPad", "Manual Flywheel")
         telemetry.addData("X/B/Y", "Manual Hood")
+        telemetry.update()
     }
 }

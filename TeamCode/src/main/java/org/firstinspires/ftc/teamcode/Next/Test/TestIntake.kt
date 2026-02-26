@@ -54,5 +54,6 @@ class TestIntake : NextFTCOpMode() {
         telemetry.addData("Controls:", "")
         telemetry.addData("L Trigger", "Run")
         telemetry.addData("L Bumper", "Reverse")
+        telemetry.update()
     }
 }

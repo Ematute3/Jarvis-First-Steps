@@ -60,9 +60,9 @@ class TestHood : NextFTCOpMode() {
 
         // Test positions
         Gamepads.gamepad1.a.whenBecomesTrue { Hood.setPosition(0.0) }
-        Gamepads.gamepad1.b.whenBecomesTrue { Hood.setPosition(0.25) }
-        Gamepads.gamepad1.x.whenBecomesTrue { Hood.setPosition(0.5) }
-        Gamepads.gamepad1.y.whenBecomesTrue { Hood.setPosition(0.75) }
+        Gamepads.gamepad1.b.whenBecomesTrue { Hood.setPosition(0.25) } // 16.5 in
+        Gamepads.gamepad1.x.whenBecomesTrue { Hood.setPosition(0.5) } // 17.25 in
+        Gamepads.gamepad1.y.whenBecomesTrue { Hood.setPosition(0.70) }// 18.1
 
         // Back to close
         Gamepads.gamepad1.back.whenBecomesTrue { Hood.close() }
@@ -82,5 +82,6 @@ class TestHood : NextFTCOpMode() {
         telemetry.addData("DPad Left", "Mid")
         telemetry.addData("DPad Right", "Auto")
         telemetry.addData("A/B/X/Y", "Test positions")
+        telemetry.update()
     }
 }

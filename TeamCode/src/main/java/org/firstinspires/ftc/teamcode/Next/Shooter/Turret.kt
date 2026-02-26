@@ -1,280 +1,175 @@
-package org.firstinspires.ftc.teamcode.Shooter.Turret
+package org.firstinspires.ftc.teamcode.ILT.Next.Subsystems.Shooter
 
 import com.qualcomm.robotcore.hardware.DcMotor
 import com.qualcomm.robotcore.util.ElapsedTime
 import dev.nextftc.control.KineticState
 import dev.nextftc.control.builder.controlSystem
-import dev.nextftc.core.commands.utility.InstantCommand
 import dev.nextftc.core.subsystems.Subsystem
 import dev.nextftc.hardware.impl.MotorEx
-import dev.nextftc.ftc.ActiveOpMode
+import org.firstinspires.ftc.teamcode.FieldConstants.BLUE_GOAL_X
+import org.firstinspires.ftc.teamcode.FieldConstants.GOAL_Y
+import org.firstinspires.ftc.teamcode.FieldConstants.RED_GOAL_X
 import org.firstinspires.ftc.teamcode.Lower.Drive.Drive
-import org.firstinspires.ftc.teamcode.Shooter.Limelight.Limelight
-import org.firstinspires.ftc.teamcode.TurretConstants
+import org.firstinspires.ftc.teamcode.Lower.Drive.Drive.currentHeading
+import org.firstinspires.ftc.teamcode.Lower.Drive.Drive.currentX
+import org.firstinspires.ftc.teamcode.Lower.Drive.Drive.currentY
+import org.firstinspires.ftc.teamcode.Lower.Drive.Drive.poseValid
+import java.lang.Math.toRadians
 import kotlin.math.*
 
-/**
- * Turret Subsystem
- * Controls turret angle using odometry and optionally limelight for fine adjustment
- *
- * AIMING METHODS:
- * 1. ODO ONLY: Uses robot position and goal position to calculate angle
- *    - Formula: atan2(goalY - robotY, goalX - robotX) - robotHeading
- * 2. ODO + LL: Uses odometry for gross aim, limelight for fine adjustment
- *    - Limelight tx provides offset from centered on AprilTag
- *    - Blends odo angle with LL adjustment
- *
- * LIMELIGHT INTEGRATION:
- * - Limelight tracks AprilTags for turret alignment
- * - TX = 0 when centered on tag
- * - Use TX to fine-tune turret position
- * - Prevents oscillation with tolerance band
- *
- * MECHANICAL:
- * - Reset to 0 at start of teleop
- * - Range: -135° to +135°
- */
 object Turret : Subsystem {
-    // ==================== HARDWARE ====================
-    lateinit var motor: MotorEx
 
-    // ==================== CONTROLLER ====================
+    enum class State { IDLE, MANUAL, ODOMETRY, RESET_HEADING }
+
+    var motor = MotorEx("turret")
+    @JvmField var alliance = Drive.Alliance.BLUE
+
     var controller = controlSystem {
-        posPid(
-            TurretConstants.turretPosPid.kP,
-            TurretConstants.turretPosPid.kI,
-            TurretConstants.turretPosPid.kD
-        )
-        basicFF(
-            TurretConstants.turretFF.kV,
-            TurretConstants.turretFF.kA,
-            TurretConstants.turretFF.kS
-        )
+        posPid(0.3, 0.0, 0.04)
+        basicFF(0.25, 0.0, 0.01)
     }
 
-    // ==================== STATE ====================
-    enum class AimMode {
-        OFF,        // Manual control only
-        ODO,        // Odometry only
-        ODO_LL      // Odometry + Limelight
-    }
-
-    enum class TurretState {
-        IDLE,
-        MANUAL,
-        AIM_ODO,
-        AIM_LL
-    }
-
-    var currentState = TurretState.IDLE
-    var currentAimMode = AimMode.ODO
     var manualPower = 0.0
+    var currentState = State.IDLE
 
-    // ==================== ANGLE TRACKING ====================
+
+
+    val goalX: Double
+        get() = if (alliance == Drive.Alliance.RED) RED_GOAL_X else BLUE_GOAL_X
+    val goalY: Double = GOAL_Y
+
+    @JvmField var minPower: Double = 0.15
+    @JvmField var maxPower: Double = 0.75
+
+    @JvmField var kV: Double = 0.27
+
+    const val GEAR_RATIO = 3.62068965517
+    const val MOTOR_TICKS_PER_REV = 537.7
+    private const val RADIANS_PER_TICK = 2.0 * PI / (MOTOR_TICKS_PER_REV * GEAR_RATIO)
+
+    // State Tracking
     private val velTimer = ElapsedTime()
-    private var lastHeading = 0.0
-    var angularVelocity = 0.0
+    private var lastRobotHeading = 0.0
+    private var robotAngularVelocity = 0.0
+    private var lastTargetSeenTime: Long = 0
 
-    // Current turret angle in radians (0 = forward)
-    var turretYaw = 0.0
-        private set
+    const val MIN_ANGLE = -3 * PI / 4
+    const val MAX_ANGLE = 3 * PI / 4
 
-    // ==================== INITIALIZATION ====================
+    var turretYaw: Double = 0.0
+
+    // Reset heading constants
+    private const val RESET_TARGET_YAW = 0.0          // ← change this (e.g. Math.toRadians(90.0))
+    // ~3°
+
     override fun initialize() {
-        motor = MotorEx("turret")
         motor.motor.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
         motor.motor.mode = DcMotor.RunMode.RUN_WITHOUT_ENCODER
-
-        // Reset to 0 at start
-        turretYaw = 0.0
-        lastHeading = 0.0
         velTimer.reset()
+        lastTargetSeenTime = System.currentTimeMillis()
     }
 
-    // ==================== ANGLE CONVERSIONS ====================
-    /** Get current turret angle in degrees */
-    val currentAngleDegrees: Double get() = Math.toDegrees(turretYaw)
+    override fun periodic() {
+        turretYaw = getYaw()
+        updateRobotVelocity()
 
-    /** Convert encoder ticks to radians */
-    private val TICKS_PER_RADIAN: Double get() =
-        (TurretConstants.MOTOR_TICKS_PER_REV * TurretConstants.gearRatio) / (2.0 * Math.PI)
+        when (currentState) {
+            State.IDLE -> {
+                motor.power = manualPower.coerceIn(-maxPower, maxPower)
+            }
+            State.MANUAL -> {
+                motor.power = manualPower.coerceIn(-maxPower, maxPower)
+            }
+            State.ODOMETRY -> {
+                aimWithOdometryOnly()
+            }
+            State.RESET_HEADING -> {
+                val currentYaw = getYaw()
+                val error = normalizeAngle(RESET_TARGET_YAW - currentYaw)
 
-    private fun ticksToRadians(ticks: Double): Double = ticks / TICKS_PER_RADIAN
-    private fun radiansToTicks(rad: Double): Int = (rad * TICKS_PER_RADIAN).toInt()
+                if (abs(error) < 0.3) {
+                    motor.power = 0.0
+                    currentState = State.IDLE   // or MANUAL if you want to keep control
+                    return
+                }
 
-    // ==================== AIMING MODES ====================
-    /**
-     * Aim using odometry only
-     * Calculates angle from robot position to goal
-     */
-    fun aimWithOdometry() {
-        currentState = TurretState.AIM_ODO
-    }
-
-    /**
-     * Aim using odometry + limelight
-     * Odometry provides gross aim, LL fine-tunes
-     */
-    fun aimWithLimelight() {
-        currentState = TurretState.AIM_LL
-    }
-
-    /**
-     * Manual turret control
-     */
-    fun manual(power: Double) {
-        currentState = TurretState.MANUAL
-        manualPower = power
-    }
-
-    /**
-     * Stop turret
-     */
-    val stop = InstantCommand{
-        currentState = TurretState.IDLE
-        motor.power = 0.0
-    }
-
-    /**
-     * Reset turret to center (0 degrees)
-     */
-    fun reset() {
-        motor.motor.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
-        motor.motor.mode = DcMotor.RunMode.RUN_WITHOUT_ENCODER
-        turretYaw = 0.0
-    }
-
-    // ==================== TARGET CALCULATION ====================
-    /**
-     * Calculate target angle using odometry
-     * @return Angle in radians
-     */
-    private fun calculateOdoTarget(): Double {
-        if (!Drive.poseValid) return turretYaw
-
-        val dx = Drive.goalX - Drive.currentX
-        val dy = Drive.goalY - Drive.currentY
-        val fieldAngle = atan2(dy, dx)
-
-        // Convert to turret angle (robot frame)
-        var targetAngle = fieldAngle - Drive.currentHeading - (Math.PI / 2) // -90 for turret offset
-
-        return normalizeAngle(targetAngle)
-    }
-
-    /**
-     * Calculate target angle using odometry + limelight
-     * @return Angle in radians
-     */
-    private fun calculateOdoLLTarget(): Double {
-        // Start with odo target
-        var target = calculateOdoTarget()
-
-        // Get limelight tx if tracking
-        if (Limelight.isValidTarget()) {
-            val tx = Limelight.tx
-
-            // Check if within tolerance (prevent oscillation)
-            if (abs(tx) > TurretConstants.LL_TOLERANCE) {
-                // Blend LL correction with odo
-                // TX is in degrees, convert to radians
-                val llCorrection = Math.toRadians(tx * TurretConstants.LL_GAIN)
-                target = normalizeAngle(target + llCorrection)
+                // Use controller to drive to target (overrides ODO)
+                applyControl(RESET_TARGET_YAW, 0.0)
             }
         }
-
-        return target
     }
 
-    /**
-     * Get angle to goal (for telemetry)
-     */
-    fun angleToGoal(): Double = Math.toDegrees(calculateOdoTarget())
-
-    // ==================== CONTROL ====================
-    private fun applyControl(targetYaw: Double, velocityComp: Double = 0.0) {
-        // Clamp to mechanical limits
-        val minRad = Math.toRadians(TurretConstants.MIN_ANGLE)
-        val maxRad = Math.toRadians(TurretConstants.MAX_ANGLE)
-        val clampedTarget = targetYaw.coerceIn(minRad, maxRad)
-
-        val currentYaw = turretYaw
-
-        // Set controller goal
-        controller.goal = KineticState(clampedTarget, velocityComp)
-
-        // Calculate power
-        var power = controller.calculate(KineticState(currentYaw, 0.0))
-
-        // Add minimum power threshold when far from target
-        val errorDeg = abs(Math.toDegrees(clampedTarget - currentYaw))
-        if (errorDeg > 0.5) {
-            power += (if (power >= 0) 1.0 else -1.0) * TurretConstants.TURRET_MIN_POWER
-        } else if (abs(velocityComp) < 0.1) {
-            power = 0.0
-        }
-
-        // Clamp and apply
-        motor.power = power.coerceIn(-TurretConstants.TURRET_MAX_POWER, TurretConstants.TURRET_MAX_POWER)
-    }
-
-    // ==================== VELOCITY TRACKING ====================
-    private fun updateVelocity() {
-        if (currentState != TurretState.AIM_ODO && currentState != TurretState.AIM_LL) {
-            angularVelocity = 0.0
+    private fun updateRobotVelocity() {
+        // Only update when needed (in ODO or RESET)
+        if (currentState != State.ODOMETRY && currentState != State.RESET_HEADING) {
+            robotAngularVelocity = 0.0
             return
         }
 
         val dt = velTimer.seconds()
         if (dt < 0.02 || dt > 0.2) {
-            angularVelocity = 0.0
+            robotAngularVelocity = 0.0
             velTimer.reset()
             return
         }
 
-        val deltaHeading = normalizeAngle(Drive.currentHeading - lastHeading)
-        angularVelocity = deltaHeading / dt
-        lastHeading = Drive.currentHeading
+        val currentHeading = currentHeading
+        if (currentHeading.isNaN() || currentHeading.isInfinite() || !poseValid) {
+            robotAngularVelocity = 0.0
+            return
+        }
+
+        val deltaHeading = normalizeAngle(currentHeading - lastRobotHeading)
+        robotAngularVelocity = deltaHeading / dt
+        lastRobotHeading = currentHeading
         velTimer.reset()
     }
 
-    // ==================== UTILITIES ====================
-    private fun normalizeAngle(angle: Double): Double {
-        var a = angle % (2.0 * Math.PI)
-        if (a <= -Math.PI) a += 2.0 * Math.PI
-        if (a > Math.PI) a -= 2.0 * Math.PI
-        return a
-    }
+    private fun applyControl(targetYaw: Double, targetVelocity: Double = 0.0) {
+        val clampedTarget = targetYaw.coerceIn(MIN_ANGLE, MAX_ANGLE)
+        val currentYaw = getYaw()
 
-    // ==================== PERIODIC ====================
-    override fun periodic() {
-        // Update yaw from encoder
-        turretYaw = ticksToRadians(motor.currentPosition.toDouble())
+        controller.goal = KineticState(clampedTarget, targetVelocity)
 
-        // Update velocity
-        updateVelocity()
+        var power = controller.calculate(KineticState(currentYaw, 0.0))
 
-        // Execute control based on state
-        when (currentState) {
-            TurretState.IDLE -> {
-                motor.power = 0.0
-            }
-            TurretState.MANUAL -> {
-                motor.power = manualPower.coerceIn(-TurretConstants.TURRET_MAX_POWER, TurretConstants.TURRET_MAX_POWER)
-            }
-            TurretState.AIM_ODO -> {
-                val target = calculateOdoTarget()
-                applyControl(target, -angularVelocity * 0.25)
-            }
-            TurretState.AIM_LL -> {
-                val target = calculateOdoLLTarget()
-                applyControl(target, -angularVelocity * 0.25)
-            }
+        val errorDeg = Math.toDegrees(abs(clampedTarget - currentYaw))
+        if (errorDeg > 0.5) {
+            power += (if (power >= 0) 1.0 else -1.0) * minPower
+        } else {
+            if (abs(targetVelocity) < 0.1) power = 0.0
         }
 
-        // Telemetry
-        ActiveOpMode.telemetry.addData("Turret/Angle", "%.1f°".format(currentAngleDegrees))
-        ActiveOpMode.telemetry.addData("Turret/Target", "%.1f°".format(Math.toDegrees(calculateOdoTarget())))
-        ActiveOpMode.telemetry.addData("Turret/Mode", currentState.name)
+        motor.power = power.coerceIn(-maxPower, maxPower)
+    }
+
+    fun aimWithOdometryOnly() {
+        if (!poseValid) return
+        val deltaX = goalX - currentX
+        val deltaY = goalY - currentY
+        val fieldAngle = atan2(deltaY, deltaX)
+        val robotHeading = if (abs(currentHeading) > 2.0 * PI) Math.toRadians(currentHeading) else currentHeading
+        applyControl(normalizeAngle(fieldAngle - robotHeading), -robotAngularVelocity * kV)
+    }
+
+    fun getYaw(): Double = normalizeAngle(motor.currentPosition * RADIANS_PER_TICK)
+
+    fun normalizeAngle(radians: Double): Double {
+        var angle = radians % (2.0 * PI)
+        if (angle <= -PI) angle += 2.0 * PI
+        if (angle > PI) angle -= 2.0 * PI
+        return angle
+    }
+
+    fun aimWithOdometry() { currentState = State.ODOMETRY }
+
+    fun stop() { currentState = State.IDLE; motor.power = 0.0 }
+
+    fun manual() { currentState = State.MANUAL }
+
+    // New: Trigger field-heading reset (call from TeleOp)
+    fun startHeadingReset() {
+        currentState = State.RESET_HEADING
+        manualPower = 0.0
     }
 }

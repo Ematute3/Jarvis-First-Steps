@@ -41,7 +41,7 @@ object Drive : Subsystem {
     var poseValid = false
 
     /** Last known good pose (for initialization) */
-    var lastKnown = Pose(0.0, 0.0, 0.0)
+    var lastKnown = Pose(72.0, 72.0, 0.0)
 
     // ==================== ALLIANCE ====================
     enum class Alliance { RED, BLUE }
@@ -65,7 +65,7 @@ object Drive : Subsystem {
      * Call this in teleOp update loop to refresh all position data
      */
     fun update() {
-        try {
+
             val pose = follower.pose
             currentX = pose.x
             currentY = pose.y
@@ -84,9 +84,6 @@ object Drive : Subsystem {
             lastY = currentY
             lastTime = now
 
-        } catch (e: Exception) {
-            poseValid = false
-        }
     }
 
     // ==================== DISTANCE CALCULATIONS ====================
