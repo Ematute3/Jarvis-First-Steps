@@ -99,9 +99,9 @@ class TeleOpBlue : NextFTCOpMode() {
 
         // Reset turret at start
 
-
+        AutoAim.setAutoAim(true)
         // Default to auto aim
-        autoAimEnabled = true
+
         currentAimMode = AimMode.ODO
 
         bindControls()

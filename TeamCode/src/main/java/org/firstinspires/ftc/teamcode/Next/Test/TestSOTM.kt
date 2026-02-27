@@ -15,18 +15,6 @@ import org.firstinspires.ftc.teamcode.AutoAim.AutoAim
 import org.firstinspires.ftc.teamcode.Next.Shooter.FlyWheel
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants
 
-
-/**
- * Test Shooting On The Move Opmode
- *
- * Tests aiming while robot is moving
- * Uses velocity to calculate virtual goal offset
- *
- * CONTROLS:
- * - Standard driving controls
- * - Right Bumper: Fire (shoots when at target)
- * - A Button: Toggle SOTM calculation display
- */
 @TeleOp(name = "TEST - SOTM", group = "Test")
 class TestSOTM : NextFTCOpMode() {
 
@@ -35,14 +23,13 @@ class TestSOTM : NextFTCOpMode() {
     init {
         addComponents(
             PedroComponent(Constants::createFollower),
-            SubsystemComponent(Drive, FlyWheel, Hood),
+            SubsystemComponent(Drive, FlyWheel, Hood, AutoAim),
             BulkReadComponent,
             BindingsComponent
         )
     }
 
     override fun onStartButtonPressed() {
-        // Start drivetrain
         PedroDriverControlled(
             -Gamepads.gamepad1.leftStickY,
             -Gamepads.gamepad1.leftStickX,
@@ -50,25 +37,19 @@ class TestSOTM : NextFTCOpMode() {
             false
         ).schedule()
 
-        // Set flywheel to auto
-        FlyWheel.mid()
+        // Enable auto aim — periodic() handles flywheel + hood automatically
+        AutoAim.setAutoAim(true)
 
         bindControls()
     }
 
     private fun bindControls() {
-        // Toggle SOTM display
         Gamepads.gamepad1.a.whenBecomesTrue {
             showSOTM = !showSOTM
         }
     }
 
     override fun onUpdate() {
-        // Update drive
-        Drive.update()
-
-        // Calculate SOTM aim
-        val aimParams = AutoAim.calculateForSOTM()
 
         if (showSOTM) {
             telemetry.addData("=== SOTM TEST ===", "")
@@ -78,36 +59,27 @@ class TestSOTM : NextFTCOpMode() {
             telemetry.addData("Robot/Vel Y", "%.1f".format(Drive.velocityY))
 
             // Virtual goal
-            telemetry.addData("", "")
             telemetry.addData("Virtual/X", "%.1f".format(Drive.getVirtualGoalX()))
             telemetry.addData("Virtual/Y", "%.1f".format(Drive.getVirtualGoalY()))
             telemetry.addData("Virtual/Dist", "%.1f\"".format(Drive.distanceToVirtualGoal()))
             telemetry.addData("Virtual/Angle", "%.1f°".format(Drive.angleToVirtualGoal()))
 
-            // Aim params
-            telemetry.addData("", "")
-            telemetry.addData("Aim/Dist", "%.2fm".format(aimParams.distance))
-            telemetry.addData("Aim/RPM", "%.0f".format(aimParams.rpm))
-            telemetry.addData("Aim/Hood", "%.2f".format(aimParams.hoodPosition))
+            // AutoAim state
+            telemetry.addData("Aim/Dist", "%.1f in".format(AutoAim.currentDistanceInches))
+            telemetry.addData("Aim/Velocity", "%.0f t/s".format(AutoAim.targetVelocity))
+            telemetry.addData("Aim/Hood", "%.2f".format(AutoAim.targetHoodPosition))
 
-            // Comparison to static aim
-            telemetry.addData("", "")
-            telemetry.addData("Static/Dist", "%.2fm".format(Drive.distanceToGoalMeters()))
-            telemetry.addData("Static/RPM", "%.0f".format(AutoAim.targetRpm))
-            telemetry.addData("Diff/RPM", "%.0f".format(aimParams.rpm - AutoAim.targetRpm))
+            // Comparison: static vs current
+            telemetry.addData("Static/Dist", "%.1f in".format(Drive.distanceToGoal()))
         }
 
         // Position
-        telemetry.addData("", "")
         telemetry.addData("Pose/X", "%.1f".format(Drive.currentX))
         telemetry.addData("Pose/Y", "%.1f".format(Drive.currentY))
 
         // Flywheel status
-        telemetry.addData("", "")
-
         telemetry.addData("Flywheel/At Target", if (FlyWheel.isAtTarget()) "YES" else "NO")
 
-        telemetry.addData("", "")
         telemetry.addData("Controls:", "")
         telemetry.addData("A", "Toggle SOTM Display")
         telemetry.addData("Driving", "Move while shooting to test")

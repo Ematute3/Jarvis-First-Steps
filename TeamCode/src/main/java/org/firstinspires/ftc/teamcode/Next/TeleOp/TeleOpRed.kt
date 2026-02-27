@@ -64,7 +64,8 @@ class TeleOpRed : NextFTCOpMode() {
             false
         ).schedule()
 
-        autoAimEnabled = true
+
+        AutoAim.setAutoAim(true)
 
         bindControls()
     }
@@ -114,9 +115,7 @@ class TeleOpRed : NextFTCOpMode() {
         Limelight.update()
 
         // Auto aim updates flywheel + hood based on distance
-        if (autoAimEnabled) {
-            AutoAim.update()
-        }
+
 
         // Turret tracks goal
         Turret.runLockedControl()
@@ -139,7 +138,7 @@ class TeleOpRed : NextFTCOpMode() {
         telemetry.addData("AutoAim", if (autoAimEnabled) "ON" else "OFF")
         telemetry.addData("Zone", if (Drive.isInShootingZone()) "YES" else "NO")
         Limelight.updateTelemetry()
-        AutoAim.updateTelemetry()
+
         panelsTelemetry.update()
     }
 }
