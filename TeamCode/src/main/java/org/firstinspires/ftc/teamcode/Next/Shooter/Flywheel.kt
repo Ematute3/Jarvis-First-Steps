@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.Shooter.FlyWheel
 import com.bylazar.configurables.annotations.Configurable
 import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.VoltageSensor
+import com.qualcomm.robotcore.util.ElapsedTime
 import dev.nextftc.control.ControlSystem
 import dev.nextftc.control.KineticState
 import dev.nextftc.control.builder.controlSystem
@@ -55,15 +56,17 @@ import org.firstinspires.ftc.teamcode.ShooterConstants
  */
 object FlyWheel : Subsystem {
     // ==================== HARDWARE ====================
-     var Fly1 = MotorEx("Fly1").floatMode()
-     var Fly2 = MotorEx("Fly2").floatMode()
+    var Fly1 = MotorEx("Fly1").floatMode()
+    var Fly2 = MotorEx("Fly2").floatMode()
     private val battery: VoltageSensor by lazy {
         ActiveOpMode.hardwareMap.get(VoltageSensor::class.java, "Control Hub")
     }
 
     // ==================== CONTROLLER ====================
+    // Store controller as class variable - rebuilt each cycle to pick up Configurable changes
     private var controller: ControlSystem = buildController()
 
+    // Build controller - reads directly from Configurables to fix copy semantics
     private fun buildController(): ControlSystem = controlSystem {
         basicFF(
             ShooterConstants.ffCoefficients.kV,
@@ -71,9 +74,9 @@ object FlyWheel : Subsystem {
             ShooterConstants.ffCoefficients.kS
         )
         velPid(
-                ShooterConstants.pidCoefficients.kP,
-                ShooterConstants.pidCoefficients.kI,
-                ShooterConstants.pidCoefficients.kD
+            ShooterConstants.pidCoefficients.kP,
+            ShooterConstants.pidCoefficients.kI,
+            ShooterConstants.pidCoefficients.kD
         )
     }
 
@@ -138,7 +141,7 @@ object FlyWheel : Subsystem {
     // ==================== PRESETS ====================
     /** Stop flywheel */
     val off = InstantCommand{ setVelocity(0.0)}
-  val close = InstantCommand{setVelocity(ShooterConstants.FLYWHEEL_CLOSE_RPM)}
+    val close = InstantCommand{setVelocity(ShooterConstants.FLYWHEEL_CLOSE_RPM)}
     val mid = InstantCommand{setVelocity(ShooterConstants.FLYWHEEL_MID_RPM)}
     val far = InstantCommand{setVelocity(ShooterConstants.FLYWHEEL_FAR_RPM)}
 
@@ -207,6 +210,10 @@ object FlyWheel : Subsystem {
 
     // ==================== PERIODIC ====================
     override fun periodic() {
+        // Rebuild controller each cycle to pick up live Configurable changes
+        // This fixes copy semantics - reads directly from constants
+        controller = buildController()
+
         // Calculate control output
         val rawPower = controller.calculate(Fly1.state)
 

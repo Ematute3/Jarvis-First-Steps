@@ -13,8 +13,6 @@ import org.firstinspires.ftc.teamcode.FieldConstants.RED_GOAL_X
 import org.firstinspires.ftc.teamcode.Lower.Drive.Drive
 import org.firstinspires.ftc.teamcode.TurretConstants
 import org.firstinspires.ftc.teamcode.TurretConstants.ALIGNMENT_TOLERANCE
-import org.firstinspires.ftc.teamcode.TurretConstants.turretFF
-import org.firstinspires.ftc.teamcode.TurretConstants.turretPosPid
 import java.lang.Math.toRadians
 import kotlin.math.*
 
@@ -53,12 +51,14 @@ object Turret : Subsystem {
     private val goalX: Double get() = if (alliance == Drive.Alliance.RED) RED_GOAL_X else BLUE_GOAL_X
     private val goalY: Double = GOAL_Y
 
-    private var controller = buildController()
-
+    // Build controller each time to pick up live Configurable changes
+    // This fixes the copy semantics issue - reads values directly from constants
     private fun buildController() = controlSystem {
-        posPid(turretPosPid.kP, turretPosPid.kI, turretPosPid.kD)
-        basicFF(turretFF.kV, turretFF.kA, turretFF.kS)
+        posPid(TurretConstants.turretPosPid.kP, TurretConstants.turretPosPid.kI, TurretConstants.turretPosPid.kD)
+        basicFF(TurretConstants.turretFF.kV, TurretConstants.turretFF.kA, TurretConstants.turretFF.kS)
     }
+
+    private var controller = buildController()
 
     // ==================== INITIALIZATION ====================
     override fun initialize() {
@@ -87,6 +87,10 @@ object Turret : Subsystem {
 
     // ==================== PERIODIC ====================
     override fun periodic() {
+        // Rebuild controller each cycle to pick up live Configurable changes
+        // This fixes copy semantics - reads directly from constants
+        controller = buildController()
+
         if (currentState == State.LOCKED) {
             updateRobotAngularVelocity()
         }

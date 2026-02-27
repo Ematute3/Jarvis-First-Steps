@@ -253,13 +253,13 @@ object SOTMConstants {
 // Data classes for feedforward (simple version without external dependencies)
 @Configurable
 data class FeedforwardParams(
-    @JvmField val kV: Double = 0.001,
-    @JvmField val kA: Double = 0.006,
-    @JvmField val kS: Double = 0.0
+    @JvmField var kV: Double = 0.001,
+    @JvmField var kA: Double = 0.006,
+    @JvmField var kS: Double = 0.0
 )
 @Configurable
 data class PIDCoeffs(
-    @JvmField  val kP: Double = 0.015,
-    @JvmField  val kI: Double = 0.0,
-    @JvmField  val kD: Double = 0.01
+    @JvmField var kP: Double = 0.015,
+    @JvmField var kI: Double = 0.0,
+    @JvmField var kD: Double = 0.01
 )

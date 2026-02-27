@@ -20,5 +20,6 @@ dependencies {
     implementation 'com.bylazar:fullpanels:1.0.12'
     implementation 'dev.nextftc:control:1.0.0'
     implementation 'dev.nextftc:bindings:1.0.1'
+    implementation "com.bylazar:configurables:1.0.5"
 }
 
