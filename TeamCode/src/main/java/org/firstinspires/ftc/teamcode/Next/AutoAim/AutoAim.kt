@@ -4,9 +4,10 @@ import dev.nextftc.core.subsystems.Subsystem
 import dev.nextftc.ftc.ActiveOpMode
 import org.firstinspires.ftc.teamcode.HoodConstants
 import org.firstinspires.ftc.teamcode.Lower.Drive.Drive
-import org.firstinspires.ftc.teamcode.Shooter.FlyWheel.FlyWheel
+
 import org.firstinspires.ftc.teamcode.Shooter.Hood.Hood
 import org.firstinspires.ftc.teamcode.ShooterConstants
+import org.firstinspires.ftc.teamcode.subsystem.FlyWheel
 
 /**
  * AutoAim Class

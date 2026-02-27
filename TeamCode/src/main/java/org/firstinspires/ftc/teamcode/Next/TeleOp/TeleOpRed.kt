@@ -16,7 +16,6 @@ import dev.nextftc.ftc.ActiveOpMode.telemetry
 import org.firstinspires.ftc.teamcode.Lower.Drive.Drive
 import org.firstinspires.ftc.teamcode.Lower.Gate.Gate
 import org.firstinspires.ftc.teamcode.Lower.Intake.Intake
-import org.firstinspires.ftc.teamcode.Shooter.FlyWheel.FlyWheel
 import org.firstinspires.ftc.teamcode.Shooter.Hood.Hood
 
 import org.firstinspires.ftc.teamcode.Shooter.Limelight.Limelight
@@ -24,6 +23,7 @@ import org.firstinspires.ftc.teamcode.AutoAim.AutoAim
 import org.firstinspires.ftc.teamcode.Next.Shooter.Turret
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants
+import org.firstinspires.ftc.teamcode.subsystem.FlyWheel
 
 /**
  * Red Alliance TeleOp
@@ -84,7 +84,7 @@ class TeleOpRed : NextFTCOpMode() {
     override fun onInit() {
         // Set to red alliance
         Drive.alliance = Drive.Alliance.RED
-        Drive.lastKnown = Pose(0.0, 0.0, 0.0)
+        Drive.lastKnown = Pose(72.0, 72.0, 0.0)
     }
 
     override fun onStartButtonPressed() {
@@ -240,7 +240,7 @@ class TeleOpRed : NextFTCOpMode() {
         // Update turret based on aim mode
         when (currentAimMode) {
             AimMode.OFF -> { /* Manual control */ }
-            AimMode.ODO -> Turret.lockOn()
+            AimMode.ODO -> Turret.aimWithOdometry()
 
         }
 

@@ -45,7 +45,7 @@ object Drive : Subsystem {
 
     // ==================== ALLIANCE ====================
     enum class Alliance { RED, BLUE }
-    var alliance = Alliance.RED
+    var alliance = Alliance.BLUE
 
     // ==================== GOAL DATA ====================
     /** Get goal X based on alliance */

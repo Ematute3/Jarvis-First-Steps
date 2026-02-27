@@ -8,9 +8,10 @@ import dev.nextftc.ftc.NextFTCOpMode
 import dev.nextftc.ftc.components.BulkReadComponent
 import dev.nextftc.ftc.ActiveOpMode.telemetry
 import org.firstinspires.ftc.teamcode.Lower.Drive.Drive
-import org.firstinspires.ftc.teamcode.Shooter.FlyWheel.FlyWheel
+
 import org.firstinspires.ftc.teamcode.Shooter.Hood.Hood
 import org.firstinspires.ftc.teamcode.AutoAim.AutoAim
+import org.firstinspires.ftc.teamcode.subsystem.FlyWheel
 import kotlin.math.abs
 
 /**

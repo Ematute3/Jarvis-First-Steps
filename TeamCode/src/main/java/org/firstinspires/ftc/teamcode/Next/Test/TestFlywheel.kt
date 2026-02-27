@@ -8,8 +8,9 @@ import dev.nextftc.ftc.Gamepads
 import dev.nextftc.ftc.NextFTCOpMode
 import dev.nextftc.ftc.components.BulkReadComponent
 import dev.nextftc.ftc.ActiveOpMode.telemetry
-import org.firstinspires.ftc.teamcode.Shooter.FlyWheel.FlyWheel
+
 import org.firstinspires.ftc.teamcode.ShooterConstants
+import org.firstinspires.ftc.teamcode.subsystem.FlyWheel
 
 /**
  * Test FlyWheel Opmode
@@ -78,13 +79,13 @@ class TestFlywheel : NextFTCOpMode() {
         telemetry.addData("=== FLYWHEEL TEST ===", "")
         telemetry.addData("Target RPM", "%.0f".format(FlyWheel.targetVelocity))
         telemetry.addData("Actual RPM", "%.0f".format(FlyWheel.getVelocity()))
-        telemetry.addData("Error", "%.0f".format(FlyWheel.getError()))
+        //telemetry.addData("Error", "%.0f".format(FlyWheel.getError()))
         telemetry.addData("At Target", if (FlyWheel.isAtTarget()) "YES" else "NO")
         telemetry.addData("Voltage Comp", if (ShooterConstants.voltageCompEnabled) "ON" else "OFF")
 
         if (showPhysics) {
-            telemetry.addData("Linear Vel", "%.2f m/s".format(FlyWheel.linearVelocity))
-            telemetry.addData("Kinetic E", "%.2f J".format(FlyWheel.kineticEnergy))
+           // telemetry.addData("Linear Vel", "%.2f m/s".format(FlyWheel.linearVelocity))
+            //telemetry.addData("Kinetic E", "%.2f J".format(FlyWheel.kineticEnergy))
         }
 
         telemetry.addData("", "")

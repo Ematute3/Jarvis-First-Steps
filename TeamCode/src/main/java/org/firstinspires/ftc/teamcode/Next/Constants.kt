@@ -125,7 +125,7 @@ object TurretConstants {
     const val MAX_ANGLE = 135.0
 
     /** Turret motor specs */
-    const val MOTOR_TICKS_PER_REV = 537.7 // goBILDA 1172
+    const val MOTOR_TICKS_PER_REV = 4000 // goBILDA 1172
 
     @JvmField var motorGearTeeth = 29
 

@@ -16,12 +16,13 @@ import dev.nextftc.ftc.ActiveOpMode.telemetry
 import org.firstinspires.ftc.teamcode.Lower.Drive.Drive
 import org.firstinspires.ftc.teamcode.Lower.Gate.Gate
 import org.firstinspires.ftc.teamcode.Lower.Intake.Intake
-import org.firstinspires.ftc.teamcode.Shooter.FlyWheel.FlyWheel
+
 import org.firstinspires.ftc.teamcode.Shooter.Hood.Hood
 import org.firstinspires.ftc.teamcode.Shooter.Limelight.Limelight
 import org.firstinspires.ftc.teamcode.AutoAim.AutoAim
 import org.firstinspires.ftc.teamcode.Next.Shooter.Turret
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants
+import org.firstinspires.ftc.teamcode.subsystem.FlyWheel
 
 /**
  * Blue Alliance TeleOp
@@ -83,7 +84,7 @@ class TeleOpBlue : NextFTCOpMode() {
     override fun onInit() {
         // Set to blue alliance
         Drive.alliance = Drive.Alliance.BLUE
-        Drive.lastKnown = Pose(0.0, 0.0, 0.0)
+        Drive.lastKnown = Pose(72.0, 72.0, 0.0)
     }
 
     override fun onStartButtonPressed() {
@@ -111,123 +112,53 @@ class TeleOpBlue : NextFTCOpMode() {
 
         // --- INTAKE ---
         // Left Trigger: Intake
-        Gamepads.gamepad1.leftTrigger.greaterThan(0.5)
+        Gamepads.gamepad1.rightTrigger.greaterThan(0.1)
             .whenBecomesTrue(Intake.run)
             .whenBecomesFalse(Intake.stop)
 
         // Left Bumper: Reverse/Eject
-        Gamepads.gamepad1.leftBumper
-            .whenBecomesTrue(Intake.reverse)
-            .whenBecomesFalse(Intake.stop)
+        Gamepads.gamepad1.leftTrigger.greaterThan(0.1) whenBecomesTrue(Intake.reverse) whenBecomesFalse(Intake.stop)
 
         // --- SHOOTING ---
         // Right Bumper: Fire (hold)
-        Gamepads.gamepad1.rightBumper
-            .whenBecomesTrue { fire() }
-            .whenBecomesFalse {
-                Gate.close
-                shootState = ShootState.READY
-            }
 
         // Right Trigger: Manual fire (when at target)
-        Gamepads.gamepad1.rightTrigger.greaterThan(0.5)
-            .whenBecomesTrue {
-                if (FlyWheel.isAtTarget()) {
-                    fire()
-                }
-            }
-
+        Gamepads.gamepad1.cross whenBecomesTrue Gate.open whenBecomesFalse Gate.close
         // --- FLYWHEEL PRESETS ---
         // D-Pad Up: Far
         Gamepads.gamepad1.dpadUp.whenBecomesTrue {
-            FlyWheel.far()
-            currentFlyMode = FlyMode.FAR
+                FlyWheel.setVelocity(1900.0).also({Hood.far()})
         }
 
         // D-Pad Right: Mid
-        Gamepads.gamepad1.dpadRight.whenBecomesTrue {
-            FlyWheel.mid()
-            currentFlyMode = FlyMode.MID
+        Gamepads.gamepad1.dpadLeft.whenBecomesTrue {
+            FlyWheel.setVelocity(1500.0).also({Hood.mid()})
         }
 
         // D-Pad Down: Close
         Gamepads.gamepad1.dpadDown.whenBecomesTrue {
-            FlyWheel.close()
-            currentFlyMode = FlyMode.CLOSE
+            FlyWheel.setVelocity(1000.0).also({Hood.close()})
         }
 
         // D-Pad Left: Off
         Gamepads.gamepad1.dpadLeft.whenBecomesTrue {
-            FlyWheel.off()
+            FlyWheel.off
             currentFlyMode = FlyMode.IDLE
         }
 
-        // --- AUTO-AIM ---
-        // Cross (X): Toggle auto-aim
-        Gamepads.gamepad1.cross.whenBecomesTrue {
-            autoAimEnabled = !autoAimEnabled
-            AutoAim.setAutoAim(autoAimEnabled)
-        }
-
-        // --- ALLIANCE ---
-        // Start: Toggle alliance (for testing)
-        Gamepads.gamepad1.start.whenBecomesTrue {
-            // Already blue, could add toggle logic
-        }
-
-        // --- RESET ---
-        // Back: Reset all
-        Gamepads.gamepad1.back.whenBecomesTrue { resetAll() }
-
-        // ==================== OPERATOR (GAMEPAD 2) ====================
-
-        // --- TURRET ---
-        // Left Stick X: Manual turret
 
 
-        // Left Bumper: Toggle aim mode
-        Gamepads.gamepad2.leftBumper.whenBecomesTrue {
-            currentAimMode = when (currentAimMode) {
-                AimMode.OFF -> AimMode.ODO
-                AimMode.ODO -> AimMode.OFF
-            }
-        }
 
-        // Right Bumper: Reset turret
+        // --- HOOD ---// D-Pad: Hood presets
 
-
-        // --- HOOD ---
-        // D-Pad: Hood presets
-        Gamepads.gamepad2.dpadUp.whenBecomesTrue { Hood.far() }
-        Gamepads.gamepad2.dpadDown.whenBecomesTrue { Hood.close() }
-        Gamepads.gamepad2.dpadLeft.whenBecomesTrue { Hood.mid() }
-        Gamepads.gamepad2.dpadRight.whenBecomesTrue { Hood.autoAdjust() }
     }
 
     // ==================== FIRE ====================
-    private fun fire() {
-        if (FlyWheel.isAtTarget()) {
-            Gate.open
-            shootState = ShootState.FIRING
-        } else {
-            shootState = ShootState.SPINNING
-        }
-    }
 
     // ==================== RESET ====================
-    private fun resetAll() {
-        ParallelGroup(
-            Hood.close,
-            Gate.close,
-            FlyWheel.off,
-            Intake.stop,
 
-        ).schedule()
 
-        currentFlyMode = FlyMode.IDLE
-        autoAimEnabled = false
-        AutoAim.setAutoAim(false)
-    }
+
 
     // ==================== UPDATE LOOP ====================
     override fun onUpdate() {
@@ -238,15 +169,8 @@ class TeleOpBlue : NextFTCOpMode() {
         Limelight.update()
 
         // Update auto aim if enabled
-        if (autoAimEnabled) {
-            AutoAim.update()
-        }
-
         // Update turret based on aim mode
-        when (currentAimMode) {
-            AimMode.OFF -> { /* Manual control */ }
-            AimMode.ODO -> Turret.lockOn()
-        }
+        Turret.aimWithOdometry()
 
         // Update telemetry
         updateTelemetry()
