@@ -1,163 +1,103 @@
-package org.firstinspires.ftc.teamcode.subsystem
+package org.firstinspires.ftc.teamcode.Next.Shooter
 
 import com.bylazar.configurables.annotations.Configurable
-import com.bylazar.telemetry.JoinedTelemetry
-import com.bylazar.telemetry.PanelsTelemetry
-import com.qualcomm.robotcore.hardware.VoltageSensor
-import dev.nextftc.control.ControlSystem
-import dev.nextftc.control.KineticState
-import dev.nextftc.control.builder.controlSystem
-import dev.nextftc.control.feedback.PIDCoefficients
-import dev.nextftc.control.feedforward.BasicFeedforwardParameters
-import dev.nextftc.core.commands.Command
-import dev.nextftc.core.commands.utility.InstantCommand
+import dev.nextftc.control2.feedback.PIDController
+import dev.nextftc.control2.feedforward.SimpleFFCoefficients
+import dev.nextftc.control2.feedforward.SimpleFeedforward
 import dev.nextftc.core.subsystems.Subsystem
+import dev.nextftc.hardware.controllable.MotorGroup
 import dev.nextftc.hardware.impl.MotorEx
+import com.qualcomm.robotcore.hardware.VoltageSensor
+import dev.nextftc.core.commands.utility.InstantCommand
 import dev.nextftc.ftc.ActiveOpMode
-import dev.nextftc.ftc.ActiveOpMode.telemetry
-import java.util.function.Supplier
+import dev.nextftc.ftc.ActiveOpMode.hardwareMap
+import kotlin.math.round
 
 @Configurable
-object FlyWheel : Subsystem {
+object FlyWheel: Subsystem {
+    val topFlywheelMotor: MotorEx = MotorEx("Fly1")
+    val bottomFlywheelMotor: MotorEx = MotorEx("Fly2")
+    val flywheelMotors: MotorGroup = MotorGroup(topFlywheelMotor, bottomFlywheelMotor)
 
-    // Hardware
-    lateinit var motor1: MotorEx
-    private lateinit var motor2: MotorEx
-
-    // FIX: lazy so hardware map is available at access time
-    private val battery: VoltageSensor by lazy {
-        ActiveOpMode.hardwareMap.get(VoltageSensor::class.java, "Control Hub")
-    }
+    private val battery: VoltageSensor by lazy { hardwareMap.get(VoltageSensor::class.java, "Control Hub") }
 
     // ==================== TUNABLE COEFFICIENTS ====================
-    // Changes to these take effect on the next periodic() call because
-    // the controller is rebuilt from them each loop.
+    @JvmField var kP: Double = 0.015
+    @JvmField var kI: Double = 0.0
+    @JvmField var kD: Double = 0.01
 
-    @JvmField  var ffCoefficients  = BasicFeedforwardParameters(0.001, 0.006, 0.0)
-    @JvmField  var pidCoefficients = PIDCoefficients(0.015, 0.00, 0.01)
+    @JvmField var ffKV: Double = 0.035
+    @JvmField var ffKA: Double = 0.0002
+    @JvmField var ffKS: Double = 0.0
 
-
-
-    // FIX: controller is now rebuilt in periodic() using the current coefficients,
-    // so @JvmField / dashboard edits to ffCoefficients / pidCoefficients take effect
-    // immediately without restarting the op mode.
-    private var controller: ControlSystem = buildController()
-
-    private fun buildController(): ControlSystem = controlSystem {
-        basicFF(ffCoefficients)
-        velPid(pidCoefficients)
-    }
-
-    // ==================== VOLTAGE COMPENSATION ====================
     private const val V_NOMINAL = 12.0
-    var voltFilt = 12.0
-    private const val ALPHA_VOLT = 0.08
+    internal const val IDLE_VELOCITY: Double = 1140.0
+
+    internal var flywheelTarget: Double = 0.0
+
+    private var velFilt = 0.0
+    private var voltFilt = 12.0
+    private const val ALPHA_VEL = 0.25
+    private const val ALPHA_VOLT = 0.3
 
     @JvmField var voltageCompEnabled = true
 
-    // ==================== STATE ====================
-    var targetVelocity = 0.0
+    internal var usePID = true
 
-    // ==================== INITIALIZATION ====================
-    override fun initialize() {
-        motor1 = MotorEx("Fly1").floatMode()
-        motor2 = MotorEx("Fly2").floatMode()
-        voltFilt = 12.0
-        targetVelocity = 0.0
-        controller = buildController()
+    fun isAtTarget(): Boolean {
+        val rounded = roundToNearest20(flywheelTarget)
+        return ((rounded - 20.0) < flywheelMotors.velocity) && ((rounded + 40.0) > flywheelMotors.velocity)
     }
 
-    // ==================== VELOCITY CONTROL ====================
+    internal fun update() {
+        // Rebuild each cycle to pick up live Configurable changes
+        val pid = PIDController(kP, kI, kD)
+        val ff = SimpleFeedforward(SimpleFFCoefficients(ffKV, ffKA, ffKS))
 
-    /**
-     * Set target velocity with voltage compensation factored into the goal.
-     * The controller goal is set in raw velocity units; periodic() applies
-     * voltage comp to the output power so the motor receives the right drive
-     * regardless of battery state.
-     */
-    fun setVelocity(speed: Double) {
-        targetVelocity = speed
-        // FIX: rebuild controller so any dashboard-tuned coefficients are picked up
-        controller = buildController()
-        controller.goal = KineticState(0.0, speed)
-    }
-
-    // ==================== PRESETS ====================
-    // FIX: changed from val to fun so commands are built fresh after initialize(),
-    // not at class-load time before the hardware map exists.
-    val off      = InstantCommand { setVelocity(0.0) }
-    val close  = InstantCommand { setVelocity(1000.0) }
-    val mid      = InstantCommand { setVelocity(1250.0) }
-    val far     = InstantCommand { setVelocity(1500.0) }
-    val max      = InstantCommand { setVelocity(1500.0) }
-    val maxFar  = InstantCommand { setVelocity(1600.0) }
-    val idle     = InstantCommand { setVelocity(-300.0) }
-    val runHigh  = InstantCommand { setVelocity(1900.0) }
-
-    // ==================== MOTOR CONTROL ====================
-
-    private fun setMotorPowers(power: Double) {
-        val clamped = power.coerceIn(-0.85, 0.85)
-        motor1.power = clamped
-        motor2.power = clamped
-    }
-
-    // ==================== PERIODIC ====================
-
-    override fun periodic() {
-        // Filter battery voltage
+        val target = roundToNearest20(flywheelTarget)
+        val velRaw = flywheelMotors.velocity
         val voltRaw = battery.voltage.coerceAtLeast(9.0)
+
+        velFilt += ALPHA_VEL * (velRaw - velFilt)
         voltFilt += ALPHA_VOLT * (voltRaw - voltFilt)
-        val voltageRatio = V_NOMINAL / voltFilt
 
-        // Raw PID+FF output from controller (uses motor1 as the velocity source)
-        val rawPower = controller.calculate(motor1.state)
+        val error = target - velFilt
 
-        // FIX: voltage comp applied consistently here for ALL velocity modes —
-        // whether set by setVelocity(), a preset, or an external caller.
-        val finalPower = if (voltageCompEnabled) {
-            (rawPower * voltageRatio).coerceIn(-0.85, 0.85)
+        val pidOut = pid.calculate(error = error)
+        val ffOut = ff.calculate(target)
+
+        var raw = (pidOut + ffOut).coerceIn(-1.0, 1.0)
+
+        // usePID=false disables only PID, FF still runs to maintain speed
+        if (!usePID) {
+            raw = ffOut.coerceIn(-1.0, 1.0)
+        }
+
+        val pow = if (voltageCompEnabled) {
+            (raw * (V_NOMINAL / voltFilt)).coerceIn(-1.0, 1.0)
         } else {
-            rawPower.coerceIn(-0.85, 0.85)
+            raw
         }
 
+        flywheelMotors.power = pow
 
-        setMotorPowers(finalPower)
-
-        // ── Panels telemetry ──────────────────────────────────────────
-        telemetry.addData("Flywheel/Power",        "%.3f".format(finalPower))
-        telemetry.addData("Flywheel/Target Vel",   "%.1f".format(targetVelocity))
-        telemetry.addData("Flywheel/Actual Vel",   "%.1f".format(motor1.velocity))
-        telemetry.addData("Flywheel/Vel Error",    "%.1f".format(targetVelocity - motor1.velocity))
-        telemetry.addData("Flywheel/At Target",    isAtTarget())
-        telemetry.addData("Flywheel/Voltage",      "%.2f".format(voltFilt))
-        telemetry.addData("Flywheel/Volt Ratio",   "%.3f".format(voltageRatio))
-        telemetry.addData("Flywheel/Volt Comp On", voltageCompEnabled)
+        ActiveOpMode.telemetry.addData("flywheel power:", pow)
+        ActiveOpMode.telemetry.addData("goal velocity:", flywheelTarget)
+        ActiveOpMode.telemetry.addData("flywheel velocity", topFlywheelMotor.velocity)
+        ActiveOpMode.telemetry.addData("Flywheel/kP", "%.4f".format(kP))
+        ActiveOpMode.telemetry.addData("Flywheel/kV", "%.4f".format(ffKV))
     }
 
-    // ==================== COMMANDS ====================
-
-    /**
-     * Manual power override — bypasses PID/FF entirely.
-     * Voltage comp is still applied so manual feel is consistent across battery levels.
-     */
-    class Manual(private val shooterPower: Supplier<Double>) : Command() {
-        override val isDone = false
-        init { requires(FlyWheel) }
-        override fun update() {
-            val voltageRatio = if (FlyWheel.voltageCompEnabled) V_NOMINAL / FlyWheel.voltFilt else 1.0
-            val compensated = (shooterPower.get() * voltageRatio).coerceIn(-0.85, 0.85)
-            FlyWheel.setMotorPowers(compensated)
-        }
+    internal fun roundToNearest20(velocity: Double): Double {
+        return round(velocity / 20.0) * 20.0
     }
 
-    // ==================== STATUS ====================
+    fun setVelocity(velocity: Double) {
+        flywheelTarget = velocity
+    }
 
-    fun isAtTarget(): Boolean =
-        motor1.velocity > (targetVelocity - 20.0) &&
-                motor1.velocity < (targetVelocity + 40.0)
-
-    fun getVelocity(): Double = motor1.velocity
-
-
+    val close = InstantCommand { setVelocity(1200.0) }
+    val mid   = InstantCommand { setVelocity(1500.0) }
+    val far   = InstantCommand { setVelocity(1900.0) }
+    val idle  = InstantCommand { setVelocity(IDLE_VELOCITY) }
 }

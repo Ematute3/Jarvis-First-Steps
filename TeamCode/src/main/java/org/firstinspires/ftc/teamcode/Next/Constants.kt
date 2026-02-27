@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode
 
 import com.bylazar.configurables.annotations.Configurable
 import com.pedropathing.geometry.Pose
+import dev.nextftc.control.feedback.PIDCoefficients
+import dev.nextftc.control.feedforward.BasicFeedforwardParameters
 import kotlin.math.*
 
 /**
@@ -78,9 +80,11 @@ object ShooterConstants {
      * Use scale to measure mass
      */
 
-    @JvmField var flywheelDiameter = 0.0762 // meters
+    @JvmField
+    var flywheelDiameter = 0.0762 // meters
 
-    @JvmField var flywheelMass = 0.500 // kg
+    @JvmField
+    var flywheelMass = 0.500 // kg
 
     val flywheelRadius: Double get() = flywheelDiameter / 2.0
     val momentOfInertia: Double get() = 0.5 * flywheelMass * flywheelRadius * flywheelRadius
@@ -101,165 +105,132 @@ object ShooterConstants {
      * KA = Acceleration compensation - helps during speed changes
      *     Usually 0.01-0.1
      */
-    @JvmField var ffCoefficients = FeedforwardParams(0.001, 0.005, 0.0) // KV, KA, KS
-    @JvmField var pidCoefficients = PIDCoeffs(0.011, 0.0, 0.01) // KP, KI, KD
 
     /** Voltage compensation */
-    const val NOMINAL_VOLTAGE = 12.0
-    @JvmField var voltageCompEnabled = true
-    const val VOLTAGE_FILTER_ALPHA = 0.08
 
-    /** Power limits */
-    const val FLYWHEEL_MAX_POWER = 0.85
-
-    /** Velocity tolerance for "at target" */
-    const val VELOCITY_TOLERANCE_LOW = -20.0
-    const val VELOCITY_TOLERANCE_HIGH = 40.0
+    @JvmField
+    var voltageCompEnabled = true
 }
 
-// ==================== TURRET CONSTANTS ====================
-@Configurable
-object TurretConstants {
-    /** Turret mechanical limits (degrees) */
-    const val MIN_ANGLE = -135.0
-    const val MAX_ANGLE = 135.0
 
-    /** Turret motor specs */
-    const val MOTOR_TICKS_PER_REV = 4000 // goBILDA 1172
+    // ==================== TURRET CONSTANTS ====================
+    @Configurable
+    object TurretConstants {
+        /** Turret mechanical limits (degrees) */
 
-    @JvmField var motorGearTeeth = 29
+        @JvmField
+        var motorGearTeeth = 29
 
-    @JvmField var outputGearTeeth = 105
+        @JvmField
+        var outputGearTeeth = 105
 
-    val gearRatio: Double get() = outputGearTeeth.toDouble() / motorGearTeeth.toDouble()
-    val degreesPerTick: Double get() = (1.0 / MOTOR_TICKS_PER_REV) * gearRatio * 360.0
+        val gearRatio: Double get() = outputGearTeeth.toDouble() / motorGearTeeth.toDouble()
 
 
+        /**
+         * Limelight settings for turret
+         * TX should be ~0 when centered on AprilTag
+         * Use this tolerance to prevent oscillation
+         */
+        // TODO: TUNE - Adjust based on testing
+        const val LL_TOLERANCE = 1.0 // degrees
+        const val LL_GAIN = 0.4 // blending factor for LL + Odo
+    }
 
-    /** PID/FF for turret */
-    @JvmField var turretPosPid = PIDCoeffs(0.3, 0.0, 0.03)
-    @JvmField var turretFF = FeedforwardParams(0.25, 0.0, 0.01)
+    // ==================== HOOD CONSTANTS ====================
+    @Configurable
+    object HoodConstants {
 
-    /** Power limits */
-    const val TURRET_MIN_POWER = 0.15
-    const val TURRET_MAX_POWER = 0.75
+        const val HOOD_CLOSE = 0.0  // Close range (near goal)
+        const val HOOD_MID = 0.5     // Mid range
+        const val HOOD_FAR = 0.7     // Far range
 
-    /** Alignment tolerance (degrees) */
-    const val ALIGNMENT_TOLERANCE = 2.0
+        /** Servo range */
+        @JvmField
+        var servoMinPosition = 0.0
+        @JvmField
+        var servoMaxPosition = 0.7
 
-    /**
-     * Limelight settings for turret
-     * TX should be ~0 when centered on AprilTag
-     * Use this tolerance to prevent oscillation
-     */
-    // TODO: TUNE - Adjust based on testing
-    const val LL_TOLERANCE = 1.0 // degrees
-    const val LL_GAIN = 0.4 // blending factor for LL + Odo
-}
+        /**
+         * Distance thresholds for hood positions (meters)
+         *
+         */
+        const val DISTANCE_CLOSE_THRESHOLD = 0.862  // < 1m = close
+        const val DISTANCE_MID_THRESHOLD = 2.587   // 1-2m = mid
+        // > 2m = far
 
-// ==================== HOOD CONSTANTS ====================
-@Configurable
-object HoodConstants {
+        /**
+         * Goal dimensions (from game manual)
+         *
+         */
+        const val GOAL_HEIGHT = 0.984 // meters
 
-    const val HOOD_CLOSE = 0.0  // Close range (near goal)
-    const val HOOD_MID = 0.5     // Mid range
-    const val HOOD_FAR = 0.7     // Far range
+        const val SHOOTER_HEIGHT = 0.37 // meters
+    }
 
-    /** Servo range */
-    @JvmField var servoMinPosition = 0.0
-    @JvmField var servoMaxPosition = 0.7
+    // ==================== INTAKE CONSTANTS ====================
+    @Configurable
+    object IntakeConstants {
+        /**
+         * Intake motor - MEASURE THESE
+         */
 
-    /**
-     * Distance thresholds for hood positions (meters)
-     *
-     */
-    const val DISTANCE_CLOSE_THRESHOLD = 0.862  // < 1m = close
-    const val DISTANCE_MID_THRESHOLD = 2.587   // 1-2m = mid
-    // > 2m = far
+        const val ROLLER_DIAMETER = 0.0508 // meters
 
-    /**
-     * Goal dimensions (from game manual)
-     *
-     */
-    const val GOAL_HEIGHT = 0.984 // meters
+        val rollerRadius: Double get() = ROLLER_DIAMETER / 2.0
 
-    const val SHOOTER_HEIGHT = 0.37 // meters
-}
+        /** Speed ratio - TUNE THROUGH TESTING */
 
-// ==================== INTAKE CONSTANTS ====================
-@Configurable
-object IntakeConstants {
-    /**
-     * Intake motor - MEASURE THESE
-     */
+        const val SPEED_RATIO = 2.5
 
-    const val ROLLER_DIAMETER = 0.0508 // meters
+        /** Power limits */
+        const val INTAKE_POWER = 1.0
+        const val REVERSE_POWER = -0.5
+    }
 
-    val rollerRadius: Double get() = ROLLER_DIAMETER / 2.0
+    // ==================== GATE CONSTANTS ====================
+    object GateConstants {
+        /** Gate servo position */
+        const val GATE_OPEN = 0.0
+        const val GATE_CLOSED = 1.0
 
-    /** Speed ratio - TUNE THROUGH TESTING */
+        /** Delay between gate open and next shot (ms) */
+        const val SHOT_DELAY_MS = 500
+    }
 
-    const val SPEED_RATIO = 2.5
+    // ==================== DRIVE CONSTANTS ====================
+    @Configurable
+    object DriveConstants {
+        /** Starting pose */
+        const val START_X = 0.0
+        const val START_Y = 0.0
+        const val START_HEADING = 0.0
 
-    /** Power limits */
-    const val INTAKE_POWER = 1.0
-    const val REVERSE_POWER = -0.5
-}
+        val startPose = Pose(START_X, START_Y, START_HEADING)
 
-// ==================== GATE CONSTANTS ====================
-object GateConstants {
-    /** Gate servo position */
-    const val GATE_OPEN = 0.0
-    const val GATE_CLOSED = 1.0
+        /** Robot physical properties */
 
-    /** Delay between gate open and next shot (ms) */
-    const val SHOT_DELAY_MS = 500
-}
+        const val WHEEL_DIAMETER = 0.104 // meters
+        const val WHEEL_CIRCUMFERENCE = PI * WHEEL_DIAMETER
+    }
 
-// ==================== DRIVE CONSTANTS ====================
-@Configurable
-object DriveConstants {
-    /** Starting pose */
-    const val START_X = 0.0
-    const val START_Y = 0.0
-    const val START_HEADING = 0.0
+    // ==================== SHOOTING ON THE MOVE ====================
+    @Configurable
+    object SOTMConstants {
+        /**
+         * Shooting on the move compensation
+         * Uses physics from port stealing document
+         *
+         * Math: Adjust aim point based on robot velocity
+         * Virtual goal = Actual goal + robot velocity * time_of_flight
+         */
+        //
+        const val TIME_OF_FLIGHT = 0.8 // seconds
+        // this is for far
 
-    val startPose = Pose(START_X, START_Y, START_HEADING)
+        /** Velocity blend factor (0-1) */
+        const val VELOCITY_BLEND = 0.5
+    }
 
-    /** Robot physical properties */
-
-    const val WHEEL_DIAMETER = 0.104 // meters
-    const val WHEEL_CIRCUMFERENCE = PI * WHEEL_DIAMETER
-}
-
-// ==================== SHOOTING ON THE MOVE ====================
-@Configurable
-object SOTMConstants {
-    /**
-     * Shooting on the move compensation
-     * Uses physics from port stealing document
-     *
-     * Math: Adjust aim point based on robot velocity
-     * Virtual goal = Actual goal + robot velocity * time_of_flight
-     */
-    //
-    const val TIME_OF_FLIGHT = 0.8 // seconds
-    // this is for far
-
-    /** Velocity blend factor (0-1) */
-    const val VELOCITY_BLEND = 0.5
-}
 
 // Data classes for feedforward (simple version without external dependencies)
-@Configurable
-data class FeedforwardParams(
-    @JvmField var kV: Double = 0.001,
-    @JvmField var kA: Double = 0.006,
-    @JvmField var kS: Double = 0.0
-)
-@Configurable
-data class PIDCoeffs(
-    @JvmField var kP: Double = 0.015,
-    @JvmField var kI: Double = 0.0,
-    @JvmField var kD: Double = 0.01
-)

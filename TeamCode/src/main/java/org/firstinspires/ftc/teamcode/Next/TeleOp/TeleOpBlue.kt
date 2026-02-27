@@ -20,9 +20,10 @@ import org.firstinspires.ftc.teamcode.Lower.Intake.Intake
 import org.firstinspires.ftc.teamcode.Shooter.Hood.Hood
 import org.firstinspires.ftc.teamcode.Shooter.Limelight.Limelight
 import org.firstinspires.ftc.teamcode.AutoAim.AutoAim
+import org.firstinspires.ftc.teamcode.Next.Shooter.FlyWheel
 import org.firstinspires.ftc.teamcode.Next.Shooter.Turret
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants
-import org.firstinspires.ftc.teamcode.subsystem.FlyWheel
+
 
 /**
  * Blue Alliance TeleOp
@@ -142,7 +143,7 @@ class TeleOpBlue : NextFTCOpMode() {
 
         // D-Pad Left: Off
         Gamepads.gamepad1.dpadLeft.whenBecomesTrue {
-            FlyWheel.off
+            FlyWheel.idle
             currentFlyMode = FlyMode.IDLE
         }
 
@@ -170,7 +171,7 @@ class TeleOpBlue : NextFTCOpMode() {
 
         // Update auto aim if enabled
         // Update turret based on aim mode
-        Turret.aimWithOdometry()
+        Turret.runLockedControl()
 
         // Update telemetry
         updateTelemetry()
@@ -184,10 +185,8 @@ class TeleOpBlue : NextFTCOpMode() {
         telemetry.addData("Pose/Y", "%.1f".format(Drive.currentY))
         telemetry.addData("Pose/Heading", "%.1f°".format(Math.toDegrees(Drive.currentHeading)))
 
-        // Shooter
-        telemetry.addData("Flywheel/Target", "%.0f".format(FlyWheel.targetVelocity))
-        telemetry.addData("Flywheel/Actual", "%.0f".format(FlyWheel.getVelocity()))
-        telemetry.addData("Flywheel/At Target", if (FlyWheel.isAtTarget()) "YES" else "NO")
+
+
 
         // Turret
 

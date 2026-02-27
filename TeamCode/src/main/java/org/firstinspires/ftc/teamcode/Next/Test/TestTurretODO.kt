@@ -62,7 +62,7 @@ class TestTurretODO : NextFTCOpMode() {
 
         // A: Enable odometry aiming
         Gamepads.gamepad1.a.whenBecomesTrue {
-          Turret.aimWithOdometry()
+          Turret.runLockedControl()
         }
 
         // B: Reset turret

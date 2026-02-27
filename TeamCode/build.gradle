@@ -30,8 +30,26 @@ android {
 dependencies {
     implementation project(':FtcRobotController')
 
-    implementation 'dev.nextftc:ftc:1.1.0'
-    implementation 'dev.nextftc:hardware:1.1.0' // If you would like to use the hardware module
+    implementation 'dev.nextftc:ftc:1.1.0-beta.4'
+    implementation 'dev.nextftc:hardware:1.1.0-beta.4'
+
+    // NextBindings
+    implementation 'dev.nextftc:bindings:1.0.1'
+
+    // NextControl v1/v2
+    implementation 'dev.nextftc:control:1.0.0'
+    implementation 'dev.nextftc.control2:control:0.0.1-alpha.4'
+
+    // NextPedro
     implementation 'dev.nextftc.extensions:pedro:1.0.0'
+
+    // PedroPathing
+    implementation 'com.pedropathing:ftc:2.1.0-alpha.2'
+    implementation 'com.pedropathing:telemetry:1.0.0'
+
+
+    implementation 'com.bylazar:fullpanels:1.0.12'
+
+
 
 }

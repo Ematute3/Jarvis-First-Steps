@@ -4,7 +4,6 @@ import com.bylazar.telemetry.JoinedTelemetry
 import com.bylazar.telemetry.PanelsTelemetry
 import com.pedropathing.geometry.Pose
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
-import dev.nextftc.core.commands.groups.ParallelGroup
 import dev.nextftc.core.components.BindingsComponent
 import dev.nextftc.core.components.SubsystemComponent
 import dev.nextftc.extensions.pedro.PedroComponent
@@ -17,49 +16,18 @@ import org.firstinspires.ftc.teamcode.Lower.Drive.Drive
 import org.firstinspires.ftc.teamcode.Lower.Gate.Gate
 import org.firstinspires.ftc.teamcode.Lower.Intake.Intake
 import org.firstinspires.ftc.teamcode.Shooter.Hood.Hood
-
 import org.firstinspires.ftc.teamcode.Shooter.Limelight.Limelight
 import org.firstinspires.ftc.teamcode.AutoAim.AutoAim
+import org.firstinspires.ftc.teamcode.Next.Shooter.FlyWheel
 import org.firstinspires.ftc.teamcode.Next.Shooter.Turret
-
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants
-import org.firstinspires.ftc.teamcode.subsystem.FlyWheel
 
-/**
- * Red Alliance TeleOp
- *
- * CONTROLS (same as Blue):
- * - Driver (Gamepad 1):
- *   - Left Stick: Field-centric drive
- *   - Right Stick X: Rotation
- *   - Left Trigger: Intake
- *   - Right Bumper: Fire (hold)
- *   - Right Trigger: Manual fire (when at target)
- *   - D-Pad: Flywheel presets
- *   - X: Toggle auto-aim
- *   - Back: Reset all
- *
- * - Operator (Gamepad 2):
- *   - Left Stick X: Manual turret
- *   - Left Bumper: Toggle aim mode
- *   - Right Bumper: Reset turret
- *   - D-Pad: Hood presets
- */
 @TeleOp(name = "TeleOp - Red", group = "Competition")
 class TeleOpRed : NextFTCOpMode() {
 
     private val panelsTelemetry = PanelsTelemetry.ftcTelemetry
     private val joinedTelemetry = JoinedTelemetry(telemetry, panelsTelemetry)
 
-    // ==================== ENUMS ====================
-    private enum class AimMode { OFF, ODO }
-    private enum class FlyMode { IDLE, CLOSE, MID, FAR, AUTO }
-    private enum class ShootState { READY, SPINNING, FIRING }
-
-    // ==================== STATE ====================
-    private var currentAimMode = AimMode.ODO
-    private var currentFlyMode = FlyMode.AUTO
-    private var shootState = ShootState.READY
     private var autoAimEnabled = false
 
     // ==================== INITIALIZATION ====================
@@ -82,13 +50,13 @@ class TeleOpRed : NextFTCOpMode() {
     }
 
     override fun onInit() {
-        // Set to red alliance
         Drive.alliance = Drive.Alliance.RED
+        Turret.setAlliance(red = true)
         Drive.lastKnown = Pose(72.0, 72.0, 0.0)
     }
 
     override fun onStartButtonPressed() {
-        // Start drivetrain - field centric
+        // Field-centric drive
         PedroDriverControlled(
             -Gamepads.gamepad1.leftStickY,
             -Gamepads.gamepad1.leftStickX,
@@ -96,186 +64,82 @@ class TeleOpRed : NextFTCOpMode() {
             false
         ).schedule()
 
-        // Reset turret at start
-
-
-        // Default to auto aim
         autoAimEnabled = true
-        currentAimMode = AimMode.ODO
 
         bindControls()
     }
 
     // ==================== CONTROLS ====================
     private fun bindControls() {
-        // ==================== DRIVER (GAMEPAD 1) ====================
-
-        // --- INTAKE ---
-        // Left Trigger: Intake
-        Gamepads.gamepad1.leftTrigger.greaterThan(0.5)
+        // --- INTAKE: left trigger ---
+        Gamepads.gamepad1.leftTrigger.greaterThan(0.1)
             .whenBecomesTrue(Intake.run)
             .whenBecomesFalse(Intake.stop)
 
-        // Left Bumper: Reverse/Eject
-        Gamepads.gamepad1.leftBumper
+        // --- OUTTAKE: right trigger ---
+        Gamepads.gamepad1.rightTrigger.greaterThan(0.1)
             .whenBecomesTrue(Intake.reverse)
             .whenBecomesFalse(Intake.stop)
 
-        // --- SHOOTING ---
-        // Right Bumper: Fire (hold)
+        // --- SHOOT: right bumper (hold) → open gate + feed intake, release → close gate ---
         Gamepads.gamepad1.rightBumper
-            .whenBecomesTrue { fire() }
-            .whenBecomesFalse {
-                Gate.close
-                shootState = ShootState.READY
-            }
+            .whenBecomesTrue(Gate.open)
+            .whenBecomesTrue(Intake.run)
+            .whenBecomesFalse(Gate.close)
+            .whenBecomesFalse(Intake.stop)
 
-        // Right Trigger: Manual fire (when at target)
-        Gamepads.gamepad1.rightTrigger.greaterThan(0.5)
-            .whenBecomesTrue {
-                if (FlyWheel.isAtTarget()) {
-                    fire()
-                }
-            }
-
-        // --- FLYWHEEL PRESETS ---
-        // D-Pad Up: Far
+        // --- FLYWHEEL / HOOD PRESETS (D-Pad) ---
         Gamepads.gamepad1.dpadUp.whenBecomesTrue {
-            FlyWheel.far()
-            currentFlyMode = FlyMode.FAR
+            FlyWheel.setVelocity(1900.0).also { Hood.far() }
         }
 
-        // D-Pad Right: Mid
         Gamepads.gamepad1.dpadRight.whenBecomesTrue {
-            FlyWheel.mid()
-            currentFlyMode = FlyMode.MID
+            FlyWheel.setVelocity(1500.0).also { Hood.mid() }
         }
 
-        // D-Pad Down: Close
         Gamepads.gamepad1.dpadDown.whenBecomesTrue {
-            FlyWheel.close()
-            currentFlyMode = FlyMode.CLOSE
+            FlyWheel.setVelocity(1000.0).also { Hood.close() }
         }
 
-        // D-Pad Left: Off
         Gamepads.gamepad1.dpadLeft.whenBecomesTrue {
-            FlyWheel.off()
-            currentFlyMode = FlyMode.IDLE
+            FlyWheel.setVelocity(FlyWheel.IDLE_VELOCITY)
         }
-
-        // --- AUTO-AIM ---
-        // Cross (X): Toggle auto-aim
-        Gamepads.gamepad1.cross.whenBecomesTrue {
-            autoAimEnabled = !autoAimEnabled
-            AutoAim.setAutoAim(autoAimEnabled)
-        }
-
-        // --- RESET ---
-        // Back: Reset all
-        Gamepads.gamepad1.back.whenBecomesTrue { resetAll() }
-
-        // ==================== OPERATOR (GAMEPAD 2) ====================
-
-        // --- TURRET ---
-        // Left Stick X: Manual turret
-
-
-        // Left Bumper: Toggle aim mode
-        Gamepads.gamepad2.leftBumper.whenBecomesTrue {
-            currentAimMode = when (currentAimMode) {
-                AimMode.OFF -> AimMode.ODO
-                AimMode.ODO -> AimMode.OFF
-            }
-        }
-
-        // Right Bumper: Reset turret
-
-
-        // --- HOOD ---
-        // D-Pad: Hood presets
-        Gamepads.gamepad2.dpadUp.whenBecomesTrue { Hood.far() }
-        Gamepads.gamepad2.dpadDown.whenBecomesTrue { Hood.close() }
-        Gamepads.gamepad2.dpadLeft.whenBecomesTrue { Hood.mid() }
-        Gamepads.gamepad2.dpadRight.whenBecomesTrue { Hood.autoAdjust() }
-    }
-
-    // ==================== FIRE ====================
-    private fun fire() {
-        if (FlyWheel.isAtTarget()) {
-            Gate.open
-            shootState = ShootState.FIRING
-        } else {
-            shootState = ShootState.SPINNING
-        }
-    }
-
-    // ==================== RESET ====================
-    private fun resetAll() {
-        ParallelGroup(
-            Hood.close,
-            Gate.close,
-            FlyWheel.off,
-            Intake.stop,
-
-        ).schedule()
-
-        currentFlyMode = FlyMode.IDLE
-        autoAimEnabled = false
-        AutoAim.setAutoAim(false)
+        Gamepads.gamepad1.cross whenBecomesTrue { !autoAimEnabled }
+        Gamepads.gamepad1.square whenBecomesTrue {autoAimEnabled}
     }
 
     // ==================== UPDATE LOOP ====================
     override fun onUpdate() {
-        // Update drive position
         Drive.update()
-
-        // Update limelight
         Limelight.update()
 
-        // Update auto aim if enabled
+        // Auto aim updates flywheel + hood based on distance
         if (autoAimEnabled) {
             AutoAim.update()
         }
 
-        // Update turret based on aim mode
-        when (currentAimMode) {
-            AimMode.OFF -> { /* Manual control */ }
-            AimMode.ODO -> Turret.aimWithOdometry()
+        // Turret tracks goal
+        Turret.runLockedControl()
 
-        }
+        // Flywheel PID loop
+        FlyWheel.update()
 
-        // Update telemetry
         updateTelemetry()
     }
 
     // ==================== TELEMETRY ====================
     private fun updateTelemetry() {
-        // Position
         telemetry.addData("=== RED TELEOP ===", "")
         telemetry.addData("Pose/X", "%.1f".format(Drive.currentX))
         telemetry.addData("Pose/Y", "%.1f".format(Drive.currentY))
         telemetry.addData("Pose/Heading", "%.1f°".format(Math.toDegrees(Drive.currentHeading)))
-
-        // Shooter
-        telemetry.addData("Flywheel/Target", "%.0f".format(FlyWheel.targetVelocity))
-        telemetry.addData("Flywheel/Actual", "%.0f".format(FlyWheel.getVelocity()))
-        telemetry.addData("Flywheel/At Target", if (FlyWheel.isAtTarget()) "YES" else "NO")
-
-        // Turret
-       // telemetry.addData("Turret/Angle", "%.1f°".format(Turret.currentAngleDegrees))
-        telemetry.addData("Turret/Mode", currentAimMode.name)
-
-        // Hood
+        telemetry.addData("Flywheel Ready", if (FlyWheel.isAtTarget()) "YES" else "NO")
         telemetry.addData("Hood/Position", "%.2f".format(Hood.currentPosition))
         telemetry.addData("Hood/Preset", Hood.currentPreset.name)
-
-        // Auto Aim
         telemetry.addData("AutoAim", if (autoAimEnabled) "ON" else "OFF")
         telemetry.addData("Zone", if (Drive.isInShootingZone()) "YES" else "NO")
-
-        // Limelight
         Limelight.updateTelemetry()
-
+        AutoAim.updateTelemetry()
         panelsTelemetry.update()
     }
 }

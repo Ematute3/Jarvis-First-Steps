@@ -11,7 +11,8 @@ import org.firstinspires.ftc.teamcode.Lower.Drive.Drive
 
 import org.firstinspires.ftc.teamcode.Shooter.Hood.Hood
 import org.firstinspires.ftc.teamcode.AutoAim.AutoAim
-import org.firstinspires.ftc.teamcode.subsystem.FlyWheel
+import org.firstinspires.ftc.teamcode.Next.Shooter.FlyWheel
+
 import kotlin.math.abs
 
 /**
@@ -52,7 +53,7 @@ class TestAutoAim : NextFTCOpMode() {
         Gamepads.gamepad1.dpadUp.whenBecomesTrue { FlyWheel.far() }
         Gamepads.gamepad1.dpadRight.whenBecomesTrue { FlyWheel.mid() }
         Gamepads.gamepad1.dpadDown.whenBecomesTrue { FlyWheel.close() }
-        Gamepads.gamepad1.dpadLeft.whenBecomesTrue { FlyWheel.off() }
+        Gamepads.gamepad1.dpadLeft.whenBecomesTrue { FlyWheel.idle() }
 
         // Manual hood
         Gamepads.gamepad1.x.whenBecomesTrue { Hood.close() }
@@ -82,12 +83,12 @@ class TestAutoAim : NextFTCOpMode() {
 
         // Actual values
         telemetry.addData("", "")
-        telemetry.addData("Actual/RPM", "%.0f".format(FlyWheel.getVelocity()))
+
         telemetry.addData("Actual/Hood", "%.2f".format(Hood.currentPosition))
 
         // Comparison
         telemetry.addData("", "")
-        telemetry.addData("Compare/RPM Match", if (abs(FlyWheel.getVelocity() - AutoAim.targetRpm) < 50) "YES" else "NO")
+
         telemetry.addData("Compare/Hood Match", if (abs(Hood.currentPosition - AutoAim.targetHoodPosition) < 0.05) "YES" else "NO")
 
         telemetry.addData("", "")

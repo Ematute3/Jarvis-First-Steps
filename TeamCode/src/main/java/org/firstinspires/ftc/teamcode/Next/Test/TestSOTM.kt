@@ -12,8 +12,9 @@ import dev.nextftc.ftc.ActiveOpMode.telemetry
 import org.firstinspires.ftc.teamcode.Lower.Drive.Drive
 import org.firstinspires.ftc.teamcode.Shooter.Hood.Hood
 import org.firstinspires.ftc.teamcode.AutoAim.AutoAim
+import org.firstinspires.ftc.teamcode.Next.Shooter.FlyWheel
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants
-import org.firstinspires.ftc.teamcode.subsystem.FlyWheel
+
 
 /**
  * Test Shooting On The Move Opmode
@@ -103,8 +104,7 @@ class TestSOTM : NextFTCOpMode() {
 
         // Flywheel status
         telemetry.addData("", "")
-        telemetry.addData("Flywheel/Target", "%.0f".format(FlyWheel.targetVelocity))
-        telemetry.addData("Flywheel/Actual", "%.0f".format(FlyWheel.getVelocity()))
+
         telemetry.addData("Flywheel/At Target", if (FlyWheel.isAtTarget()) "YES" else "NO")
 
         telemetry.addData("", "")
