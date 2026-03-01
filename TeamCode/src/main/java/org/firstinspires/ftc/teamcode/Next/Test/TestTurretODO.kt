@@ -43,7 +43,7 @@ class TestTurretODO : NextFTCOpMode() {
 
     override fun onInit() {
         // Drive.lastKnown = Pose(72.0, 72.0, 0.0)
-        follower.pose = Pose(72.0,72.0,0.0)
+        //follower.pose = Pose(72.0,72.0,0.0)
     }
 
     override fun onStartButtonPressed() {
