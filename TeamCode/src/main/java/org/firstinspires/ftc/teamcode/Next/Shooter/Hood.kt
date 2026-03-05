@@ -176,21 +176,6 @@ object Hood : Subsystem {
      * @param velocityMps Launch velocity in m/s
      * @return Required launch angle in degrees
      */
-    fun calculateAnglePhysics(distanceMeters: Double, velocityMps: Double): Double {
-        val g = 9.81 // m/s²
-        val h = HoodConstants.GOAL_HEIGHT - HoodConstants.SHOOTER_HEIGHT
-        val d = distanceMeters
-        val v = velocityMps
-
-        val v2 = v * v
-        val term1 = v2 - g * d
-        val term2 = g * sqrt(d * d + h * h)
-
-        if (term2 == 0.0) return 20.0 // Default to minimum angle
-
-        val angleRad = atan(term1 / term2)
-        return Math.toDegrees(angleRad).coerceIn(20.0, 50.0)
-    }
 
     // ==================== PERIODIC ====================
     override fun periodic() {

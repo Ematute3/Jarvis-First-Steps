@@ -19,7 +19,7 @@ import org.firstinspires.ftc.teamcode.IntakeConstants
  */
 object Intake : Subsystem {
     // ==================== HARDWARE ====================
-    private var intakeMotor = MotorEx("intake")
+    var intakeMotor = MotorEx("intake")
 
     // ==================== STATE ====================
     enum class IntakeState {
@@ -37,6 +37,10 @@ object Intake : Subsystem {
     }
 
     // ==================== COMMANDS ====================
+    internal fun run(iPow: Double) {
+
+        intakeMotor.power = iPow
+    }
 
     /** Start intaking */
     val run = InstantCommand{
@@ -56,6 +60,7 @@ object Intake : Subsystem {
     }
 
 
+
     /** Get current state */
     fun getState(): IntakeState = intakeState
 
@@ -67,10 +72,7 @@ object Intake : Subsystem {
      * @param drivetrainSpeed Speed in meters/second
      * @return Required intake motor RPM
      */
-    fun calculateIntakeRpm(drivetrainSpeed: Double): Double {
-        val angularVelocity = (drivetrainSpeed * IntakeConstants.SPEED_RATIO) / IntakeConstants.rollerRadius
-        return (60.0 * angularVelocity) / (2.0 * Math.PI)
-    }
+
 
     // ==================== PERIODIC ====================
     override fun periodic() {

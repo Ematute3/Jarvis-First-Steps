@@ -22,6 +22,7 @@ import org.firstinspires.ftc.teamcode.AutoAim.AutoAim
 import org.firstinspires.ftc.teamcode.Next.Shooter.FlyWheel
 import org.firstinspires.ftc.teamcode.Next.Shooter.Turret
 import org.firstinspires.ftc.teamcode.Next.Shooter.Turret.currentState
+import org.firstinspires.ftc.teamcode.Systems.Command
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants
 
 @TeleOp(name = "TeleOp - Red", group = "Competition")
@@ -48,8 +49,8 @@ class TeleOpRed : NextFTCOpMode() {
     }
 
     override fun onInit() {
-        Turret.alliance = Turret.Alliance.BLUE
-        follower.pose = Drive.lastKnown
+        Turret.alliance = Turret.Alliance.RED
+        follower.pose = Command.autoPose
     }
 
     override fun onStartButtonPressed() {
@@ -63,15 +64,6 @@ class TeleOpRed : NextFTCOpMode() {
     }
 
     // Sets follower + Drive state atomically, then re-locks turret
-    private fun resetPose(x: Double, y: Double, headingDegrees: Double) {
-        val pose = Pose(x, y, Math.toRadians(headingDegrees))
-        follower.pose = pose
-        Drive.currentX = x
-        Drive.currentY = y
-        Drive.currentHeading = Math.toRadians(headingDegrees)
-        Drive.lastKnown = pose
-        Turret.lock()
-    }
 
     private fun bindControls() {
         Gamepads.gamepad1.rightTrigger.greaterThan(0.1)
@@ -93,14 +85,14 @@ class TeleOpRed : NextFTCOpMode() {
             FlyWheel.setVelocity(1900.0).also({ Hood.far() })
         }
 
-        // Red side wall: x=0, y=0, heading=0
-        Gamepads.gamepad1.square.whenBecomesTrue {
-            resetPose(0.0, 0.0, 0.0)
-        }
 
         // Blue side wall: x=144, y=0, heading=180
-        Gamepads.gamepad1.triangle.whenBecomesTrue {
-            resetPose(144.0, 0.0, 180.0)
+        Gamepads.gamepad1.square.whenBecomesTrue {
+           // resetPose(8.0, 8.0, 180.0)
+            follower.pose = Pose(0.0,8.0,180.0).also({ Turret.lock() })
+        }
+        Gamepads.gamepad1.triangle.whenBecomesTrue{
+            Turret.runResetControl()
         }
     }
 
@@ -127,9 +119,7 @@ class TeleOpRed : NextFTCOpMode() {
         telemetry.addData("Hood/Position", "%.2f".format(Hood.currentPosition))
         telemetry.addData("Hood/Preset", Hood.currentPreset.name)
         telemetry.addData("Zone", if (Drive.isInShootingZone()) "YES" else "NO")
-        telemetry.addData("last pose x", Drive.lastKnown.x)
-        telemetry.addData("last pose y", Drive.lastKnown.y)
-        telemetry.addData("last pose h", Drive.lastKnown.heading)
+
         telemetry.update()
         panelsTelemetry.update()
     }

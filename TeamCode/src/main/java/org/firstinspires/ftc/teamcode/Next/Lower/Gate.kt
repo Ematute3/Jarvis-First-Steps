@@ -16,29 +16,32 @@ object Gate : Subsystem {
     private var gateServo =  ServoEx("gate")
 
     // ==================== STATE ====================
-    private var isOpen = false
 
     // ==================== INITIALIZATION ====================
     override fun initialize() {
+
     }
 
     // ==================== COMMANDS ====================
     /** Open the gate */
+    internal fun setPosition(pos: Double){
+        gateServo.position = pos
+    }
+
     val open = InstantCommand{
-        gateServo.position = GateConstants.GATE_OPEN
-        isOpen = true
+        setPosition(GateConstants.GATE_OPEN)
     }
-
-
-    /** Close the gate */
     val close = InstantCommand{
-        gateServo.position = GateConstants.GATE_CLOSED
-
+        setPosition(GateConstants.GATE_CLOSED)
     }
-
     /** Toggle gate state */
 
-
+    fun open(){
+        setPosition(GateConstants.GATE_OPEN)
+    }
+    fun close(){
+        setPosition(GateConstants.GATE_CLOSED)
+    }
 
     // ==================== PERIODIC ====================
     override fun periodic() {

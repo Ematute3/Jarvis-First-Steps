@@ -114,8 +114,6 @@ object Turret : Subsystem {
     }
 
     fun runLockedControl() {
-        if (!Drive.poseValid) return
-
         val deltaX = goalX - currentX
         val deltaY = goalY - currentY
         val fieldAngleToGoal = atan2(deltaY, deltaX)

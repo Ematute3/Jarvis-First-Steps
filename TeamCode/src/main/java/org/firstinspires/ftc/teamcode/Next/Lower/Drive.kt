@@ -41,7 +41,7 @@ object Drive : Subsystem {
     var poseValid = false
 
     /** Last known good pose (for initialization) */
-    var lastKnown = Pose(72.0, 72.0, 0.0)
+
 
     // ==================== ALLIANCE ====================
     enum class Alliance { RED, BLUE }
@@ -57,7 +57,6 @@ object Drive : Subsystem {
     // ==================== INITIALIZATION ====================
     override fun initialize() {
         // Initialize with last known pose
-        follower.setStartingPose(lastKnown)
     }
 
     // ==================== UPDATE ====================
@@ -71,7 +70,7 @@ object Drive : Subsystem {
             currentY = pose.y
             currentHeading = pose.heading
             poseValid = true
-            lastKnown = pose
+
 
             // Calculate velocity
             val now = System.currentTimeMillis()

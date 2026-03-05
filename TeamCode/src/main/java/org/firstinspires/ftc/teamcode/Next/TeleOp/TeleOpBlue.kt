@@ -22,6 +22,7 @@ import org.firstinspires.ftc.teamcode.AutoAim.AutoAim
 import org.firstinspires.ftc.teamcode.Next.Shooter.FlyWheel
 import org.firstinspires.ftc.teamcode.Next.Shooter.Turret
 import org.firstinspires.ftc.teamcode.Next.Shooter.Turret.currentState
+import org.firstinspires.ftc.teamcode.Systems.Command
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants
 
 @TeleOp(name = "TeleOp - Blue", group = "Competition")
@@ -49,7 +50,7 @@ class TeleOpBlue : NextFTCOpMode() {
 
     override fun onInit() {
         Turret.alliance = Turret.Alliance.BLUE
-        follower.pose = Drive.lastKnown
+       follower.pose = Command.autoPose
     }
 
     override fun onStartButtonPressed() {
@@ -62,15 +63,6 @@ class TeleOpBlue : NextFTCOpMode() {
         bindControls()
     }
 
-    private fun resetPose(x: Double, y: Double, headingDegrees: Double) {
-        val pose = Pose(x, y, Math.toRadians(headingDegrees))
-        follower.pose = pose
-        Drive.currentX = x
-        Drive.currentY = y
-        Drive.currentHeading = Math.toRadians(headingDegrees)
-        Drive.lastKnown = pose
-        Turret.lock()
-    }
 
     private fun bindControls() {
         Gamepads.gamepad1.rightTrigger.greaterThan(0.1)
@@ -94,7 +86,10 @@ class TeleOpBlue : NextFTCOpMode() {
 
         // Blue side wall: x=144, y=0, heading=0
         Gamepads.gamepad1.square.whenBecomesTrue {
-            resetPose(144.0, 0.0, 0.0)
+            follower.pose = Pose(136.0,8.0,0.0).also({ Turret.lock() })
+        }
+        Gamepads.gamepad1.triangle.whenBecomesTrue{
+            Turret.runResetControl()
         }
     }
 
@@ -102,6 +97,7 @@ class TeleOpBlue : NextFTCOpMode() {
         Drive.update()
         currentState = Turret.State.LOCKED
         updateTelemetry()
+
     }
 
     override fun onStop() {
@@ -117,9 +113,7 @@ class TeleOpBlue : NextFTCOpMode() {
         telemetry.addData("Pose/X", "%.1f".format(Drive.currentX))
         telemetry.addData("Pose/Y", "%.1f".format(Drive.currentY))
         telemetry.addData("Pose/Heading", "%.1f°".format(Math.toDegrees(Drive.currentHeading)))
-        telemetry.addData("last pose x", Drive.lastKnown.x)
-        telemetry.addData("last pose y", Drive.lastKnown.y)
-        telemetry.addData("last pose h", Drive.lastKnown.heading)
+
         telemetry.addData("Hood/Position", "%.2f".format(Hood.currentPosition))
         telemetry.addData("Hood/Preset", Hood.currentPreset.name)
         telemetry.addData("Zone", if (Drive.isInShootingZone()) "YES" else "NO")
